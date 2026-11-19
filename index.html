@@ -625,6 +625,25 @@ header h1{padding-bottom:10px}
 .tabs .dotwrap{align-self:center;margin:0 0 6px 10px;padding-left:14px;border-left:1px solid #3b2d70}
 .menubtn{width:48px;height:48px;border-radius:50%;background:transparent;border:2px solid #3b2d70;color:#b9aee8;font-size:1.4rem;line-height:1;cursor:pointer}
 .menubtn:active{border-color:#00e5ff;color:#00e5ff}
+
+/* result screen */
+.resx{position:fixed;top:18px;right:18px;width:48px;height:48px;border-radius:50%;border:2px solid #3b2d70;background:#2a1f5c;color:#fff;font-size:1.2rem;cursor:pointer;z-index:5}
+.resmain{display:flex;gap:14px;justify-content:center;margin-top:16px}
+.resmain .resrep{font-size:1.25rem;min-height:60px;padding:0 30px}
+.resmain .resnext{min-height:60px;padding:0 26px;border:2px solid #c6ff00!important;color:#c6ff00!important}
+.reslinks{display:flex;gap:22px;justify-content:center;margin-top:12px}
+.reslinks button{background:none;border:none;color:#b9aee8;font-size:.9rem;text-decoration:underline;cursor:pointer;padding:10px 6px;font-family:inherit}
+.resmain,.reslinks{animation:resin .5s ease-out 1s both}@keyframes resin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* player summary: readable numbers */
+#sBody td,.card thead th{text-align:center;font-variant-numeric:tabular-nums}
+#sBody td:first-child{text-align:left}
+#sBody td{font-size:1.15rem;padding:8px 4px}
+#sBody td.z{color:#7d72b0;font-weight:500}
+#sBody td.pt{color:#e4ff6a;font-weight:900}#sBody td.er{color:#ff9fcf;font-weight:900}#sBody td.n{color:#fff;font-weight:800}
+#sBody td.z.pt,#sBody td.z.er{color:#7d72b0;font-weight:500}
+#sBody tr:nth-child(even){background:rgba(255,255,255,.03)}
+#sBody tr.tot td{border-top:2px solid #3b2d70;background:rgba(0,229,255,.07)}
+thead .gp{color:#e4ff6a}thead .ge{color:#ff9fcf}thead tr.g1 th{border-bottom:1px solid #3b2d70}
 </style>
 </head>
 <body>
@@ -736,7 +755,7 @@ header h1{padding-bottom:10px}
         <div id="heatCap" class="hlegend"></div>
         <div id="aCourt"></div>
       </div>
-      <div class="card"><h2>Player Summary</h2><table><thead><tr><th>Player</th><th>Pts(+)</th><th>Kill</th><th>Ace</th><th>Blk</th><th>Err(-)</th></tr></thead><tbody id="sBody"></tbody></table></div>
+      <div class="card"><h2>Player Summary</h2><table><thead><tr class="g1"><th rowspan="2">Player</th><th colspan="4" class="gp">Points (+)</th><th colspan="6" class="ge">Errors (-)</th></tr><tr><th>Total</th><th>Kill</th><th>Ace</th><th>Blk</th><th>Total</th><th title="Attack error">Atk</th><th title="Serve error">Srv</th><th title="Receive error">Rcv</th><th title="Set error">Set</th><th title="Net or foul">Net</th></tr></thead><tbody id="sBody"></tbody></table></div>
     </div>
   </div>
 </div>
@@ -748,13 +767,12 @@ header h1{padding-bottom:10px}
     <div id="resScore" class="resscore"></div>
     <div id="resOpp" class="resopp"></div>
     <div id="resTeam" class="resteam"></div>
-    <div class="resbtns">
-      <button class="btn btn-p" onclick="closeRes();S.rvKey=null;S.rvSet=null;go('review');openReport()">Review set</button>
-      <button class="btn btn-o" onclick="saveFile()">💾 Save File</button>
-      <button class="btn btn-o" onclick="closeRes();undo()">↩ Undo last point</button>
-      <button class="btn btn-p" onclick="nextSet()">Next Set ▶</button>
-      <button class="btn btn-o" onclick="closeRes()">Close</button>
+    <button class="resx" aria-label="Close" onclick="closeRes()">✕</button>
+    <div class="resbtns resmain">
+      <button class="btn btn-p resrep" id="resRep" onclick="closeRes();S.rvKey=null;S.rvSet=null;go('review');openReport()">Set Report</button>
+      <button class="btn btn-o resnext" onclick="nextSet()">Next Set ▶</button>
     </div>
+    <div class="reslinks"><button onclick="closeRes();undo()">↩ Undo final point (reopens the set)</button><button onclick="saveFile()">💾 Save backup</button></div>
   </div>
 </div>
 <div id="histM" class="modalbg" style="display:none" onclick="closeHist()">
@@ -778,7 +796,7 @@ header h1{padding-bottom:10px}
       <div id="edCtl" style="flex:1;min-width:260px"></div>
     </div>
     <div style="display:flex;gap:10px;justify-content:space-between;margin-top:12px;align-items:center">
-      <button class="btn btn-o" id="edDel" onclick="edDelete()">🗑 Delete from here</button>
+      <button class="btn btn-o" id="edDel" onclick="edDelete()">🗑 Remove last play</button>
       <span style="display:flex;gap:10px"><button class="btn btn-o" onclick="edClose()">Cancel</button><button class="btn btn-p" onclick="edSave()">Save</button></span>
     </div>
   </div>
@@ -1079,6 +1097,7 @@ function showResult(r) {
   document.getElementById('resTitle').textContent = win ? 'WIN!!' : 'LOST...';
   document.getElementById('resScore').textContent = `${S.m.us} - ${S.m.them}`;
   document.getElementById('resOpp').textContent = `vs ${S.m.opp} (${S.m.set})`;
+  document.getElementById('resRep').textContent = `📋 ${S.m.set} Report`;
   document.getElementById('resTeam').innerHTML = S.m.court.map((pid, k) => { const q = S.r.find(z => z.id === pid); return q ? `<div class="av" style="animation-delay:${k*0.12}s">${avHTML(q)}</div>` : ''; }).join('');
   const fx = document.getElementById('resFx'); fx.innerHTML = '';
   const cols = win ? ['#c6ff00','#ff2e93','#fff'] : ['#b9aee8'];
@@ -1140,7 +1159,9 @@ function hideRecToast() { document.getElementById('recToast').classList.remove('
 function undoTo(id) { let n = 0; while (S.m.logs.length && n++ < 500) { const last = S.m.logs[S.m.logs.length - 1].id; undo(); if (last === id) break; } }
 function rowMenu(id) {
   const l = S.m.logs.find(x => x.id === id);
-  if (l && l.lbl !== 'Point' && l.type !== 'call') openEdit(id); else askConfirm('Remove this play and every play after it?', () => undoTo(id));
+  if (l && l.lbl !== 'Point' && l.type !== 'call') openEdit(id);
+  else if (l && S.m.logs[S.m.logs.length - 1] === l) askConfirm('Remove the last play?', () => undoTo(id));
+  else say('ONLY THE LAST PLAY CAN BE REMOVED (USE UNDO)');
 }
 let EDT = null;
 const EDL = {'Attack Kill':'⚡ Kill','Service Ace':'🎯 Ace','Block Point':'🧱 Block','Attack Err':'Attack Err','Serve Err':'Serve Err','Receive Err':'Recv Err','Set Err':'Set Err','Net / Foul':'Net/Foul','Opp Error':'Opp Error','Opp Out':'Other','Opp Other':'Other'};
@@ -1164,7 +1185,7 @@ function edBan(lbl, pid) {
 function renEdit() {
   const E = EDT, l = E.l;
   document.getElementById('edTitle').textContent = `Edit play #${E.idx}   ${l.us}-${l.them}   ${l.pname}`;
-  document.getElementById('edDel').style.display = E.owner === S.m ? '' : 'none';
+  document.getElementById('edDel').style.display = E.owner === S.m && E.owner.logs[E.owner.logs.length - 1] === l ? '' : 'none';
   const chip = (on, dis, fn, txt) => `<button class="btn btn-sm ${on ? 'btn-p' : 'btn-o'}"${dis ? ' disabled style="opacity:.3"' : ''} onclick="${fn}">${txt}</button>`;
   let h = '';
   if (typeof l.pid === 'number') {
@@ -1205,7 +1226,7 @@ function edSave() {
 }
 function edDelete() {
   const id = EDT && EDT.l.id; if (!id) return; edClose();
-  askConfirm('Remove this play and every play after it?', () => undoTo(id));
+  askConfirm('Remove the last play?', () => undoTo(id));
 }
 function rotN(ca, k) { let c = [...ca]; for (let i = 0; i < k; i++) c = [c[1], c[2], c[3], c[4], c[5], c[0]]; return c; }
 function rot() {
@@ -1486,10 +1507,15 @@ function upd() {
   document.getElementById('rTitle').textContent = `${S.m.date} vs ${S.m.opp} (${S.m.set}: ${S.m.us}-${S.m.them})`;
   renRvBar(); renReport(); renTL('rTime', false, 'rv');
   { const sa = document.getElementById('savedAt'); if (sa) { const d = new Date(); sa.textContent = '✓'; sa.title = 'Auto-saved ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); } }
-  document.getElementById('sBody').innerHTML = S.r.map(p => {
-    const pl = rvLogs().filter(l => l.pid === p.id);
-    return `<tr><td><b>${p.name}</b></td><td style="color:var(--g);font-weight:700">${pl.filter(l=>l.type==='good').length}</td><td>${pl.filter(l=>l.lbl==='Attack Kill').length}</td><td>${pl.filter(l=>l.lbl==='Service Ace').length}</td><td>${pl.filter(l=>l.lbl==='Block Point').length}</td><td style="color:var(--e);font-weight:700">${pl.filter(l=>l.type==='err').length}</td></tr>`;
-  }).join('');
+  const logsAll = rvLogs().filter(l => l.type !== 'call');
+  const cnt = (pl, f) => pl.filter(f).length, cell = (v, cls) => `<td class="${cls}${v ? '' : ' z'}">${v}</td>`;
+  const rowOf = (name, pl, bold) => {
+    const vals = [cnt(pl, l => l.type === 'good'), cnt(pl, l => l.lbl === 'Attack Kill'), cnt(pl, l => l.lbl === 'Service Ace'), cnt(pl, l => l.lbl === 'Block Point'),
+      cnt(pl, l => l.type === 'err'), cnt(pl, l => l.lbl === 'Attack Err'), cnt(pl, l => l.lbl === 'Serve Err'), cnt(pl, l => l.lbl === 'Receive Err'), cnt(pl, l => l.lbl === 'Set Err'), cnt(pl, l => l.lbl === 'Net / Foul')];
+    return `<tr${bold ? ' class="tot"' : ''}><td><b>${name}</b></td>${cell(vals[0], 'pt')}${vals.slice(1, 4).map(v => cell(v, 'n')).join('')}${cell(vals[4], 'er')}${vals.slice(5).map(v => cell(v, 'n')).join('')}</tr>`;
+  };
+  const mine = logsAll.filter(l => typeof l.pid === 'number');
+  document.getElementById('sBody').innerHTML = S.r.map(p => rowOf(p.name, logsAll.filter(l => l.pid === p.id))).join('') + rowOf('Team (players)', mine, true);
 }
 /* ---- Save / Load whole data as a local file ---- */
 async function saveFile() {
