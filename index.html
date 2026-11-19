@@ -594,6 +594,16 @@ input:focus,select:focus,textarea:focus{border-color:#00e5ff!important;box-shado
 .hleg{display:flex;gap:18px;flex-wrap:wrap;align-items:center;color:#fff;font-weight:700;margin-bottom:4px}
 .hleg span{display:inline-flex;align-items:center;gap:6px}
 .hcount{color:#fff;font-size:.9rem}.hhint{font-size:.8rem;margin-top:2px}
+
+.srres{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border:3px solid;border-radius:14px;padding:8px 18px;margin:4px 0 10px;background:#120c2e}
+.srres b{font-size:1.9rem;font-style:italic;letter-spacing:.04em}
+.srres .srscore{font-size:1.9rem;font-weight:900}
+.srres .srvs{font-size:.9rem;color:#b9aee8;margin-left:auto}
+.srres.win{border-color:#c6ff00}.srres.win b,.srres.win .srscore{color:#c6ff00}
+.srres.lose{border-color:#ff2e93}.srres.lose b,.srres.lose .srscore{color:#ff2e93}
+.srres.prog{border-color:#00e5ff}.srres.prog b,.srres.prog .srscore{color:#00e5ff}
+.srlab{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#b9aee8;margin:8px 0 2px}
+.srshout{list-style:none;padding-left:0!important}.srshout li{margin-bottom:3px}
 </style>
 </head>
 <body>
@@ -1023,14 +1033,15 @@ function courtTap(e) {
   upd();
 }
 function selP(id) { S.sel = id; if (id !== 'OPP') S.ev = {from:null, to:null}; upd(); }
-function result() {
-  const m = S.m, T = m.tgt;
+function outcomeOf(m) {
+  const T = m.tgt;
   const ext = (m.us === m.them && m.us >= T) || m.logs.some(l => l.us === l.them && l.us >= T);
   if (ext) { if (m.us >= T + 2) return 'win'; if (m.them >= T + 2) return 'lose'; return null; }
   if (m.us >= T && m.us - m.them >= 2) return 'win';
   if (m.them >= T && m.them - m.us >= 2) return 'lose';
   return null;
 }
+function result() { return outcomeOf(S.m); }
 function tgtLabel() {
   const m = S.m, T = m.tgt, r = result();
   if (r) return 'GAME SET';
@@ -1288,6 +1299,28 @@ function srStats(logs) {
   o.servers = {}; sv.forEach(l => { const id = l.snap && l.snap[0]; if (id == null) return; const e = o.servers[id] || (o.servers[id] = {n: 0, err: 0, ace: 0}); e.n++; if (mine(l) && l.pid === id) { if (l.lbl === 'Serve Err') e.err++; if (l.lbl === 'Service Ace') e.ace++; } });
   return o;
 }
+function srShout(L) {
+  const by = {}, get = id => by[id] || (by[id] = {ace: 0, aceRun: 0, kill: 0, blk: 0, srvRun: 0}), mine = l => typeof l.pid === 'number';
+  let ar = null, sr = null;
+  L.forEach(l => {
+    if (l.type === 'call') return;
+    const sid = l.svB === 'us' && l.snap ? l.snap[0] : null;
+    if (mine(l) && l.type === 'good') { const e = get(l.pid); if (l.lbl === 'Attack Kill') e.kill++; if (l.lbl === 'Block Point') e.blk++; if (l.lbl === 'Service Ace') e.ace++; }
+    if (mine(l) && l.type === 'good' && l.lbl === 'Service Ace') { ar = ar && ar.id === l.pid ? {id: l.pid, n: ar.n + 1} : {id: l.pid, n: 1}; const e = get(l.pid); e.aceRun = Math.max(e.aceRun, ar.n); } else ar = null;
+    if (sid != null && l.type === 'good') { sr = sr && sr.id === sid ? {id: sid, n: sr.n + 1} : {id: sid, n: 1}; const e = get(sid); e.srvRun = Math.max(e.srvRun, sr.n); } else sr = null;
+  });
+  const out = [];
+  Object.keys(by).forEach(k => {
+    const e = by[k], p = S.r.find(x => x.id === +k); if (!p) return; const bits = [];
+    if (e.aceRun >= 2) bits.push([10 * e.aceRun, `${e.aceRun} aces in a row`]); else if (e.ace >= 2) bits.push([5 * e.ace, `${e.ace} aces`]);
+    if (e.srvRun >= 4) bits.push([2 * e.srvRun, `${e.srvRun} points in a row on serve`]);
+    if (e.kill >= 3) bits.push([3 * e.kill, `${e.kill} kills`]);
+    if (e.blk >= 2) bits.push([5 * e.blk, `${e.blk} blocks`]);
+    if (!bits.length) return; bits.sort((a, b) => b[0] - a[0]);
+    out.push({score: bits.reduce((t, b) => t + b[0], 0), txt: `${p.name}: ${bits.slice(0, 2).map(b => b[1]).join(', ')}`});
+  });
+  return out.sort((a, b) => b.score - a.score).slice(0, 4).map(x => x.txt);
+}
 function srMetrics(o, prev) {
   const pl = (n, w) => n + ' ' + w + (n === 1 ? '' : 's'), M = [];
   const add = (key, short, k, n, dir, th, g, f, pk, pn) => M.push({key, short, k, n, dir, th, g, f, rate: n ? k / n : 0, few: n < SR.MIN, pk, pn});
@@ -1331,8 +1364,17 @@ function renReport() {
   const o = srStats(R.logs), M = srMetrics(o, R.prev ? srStats(R.prev.logs) : null);
   const pick = st => M.filter(m => m.status === st).sort((a, b) => b.dist - a.dist).slice(0, 2);
   const G = pick('good'), F = pick('fix'), li = a => a.length ? a.map(m => `<li>${m.text}</li>`).join('') : null;
-  const last = R.logs[R.logs.length - 1], score = last ? `${last.us}-${last.them}` : '';
-  const head = `${R.title}  ${score}.  ${G.length ? 'Strength: ' + G[0].short + '.  ' : ''}${F.length ? 'Focus: ' + F[0].short + '.' : (G.length ? '' : 'No clear strength or gap in this set.')}`;
+  const last = R.logs[R.logs.length - 1], shout = srShout(R.logs);
+  const sets = rvSel(), outs = sets.map(m => outcomeOf(m));
+  let banner;
+  if (sets.length === 1) {
+    const oc = outs[0], cls = oc === 'win' ? 'win' : (oc === 'lose' ? 'lose' : 'prog');
+    banner = `<div class="srres ${cls}"><b>${oc === 'win' ? 'WIN' : (oc === 'lose' ? 'LOST' : 'IN PROGRESS')}</b><span class="srscore">${last.us} - ${last.them}</span><span class="srvs">vs ${sets[0].opp || 'Opponent'} · ${sets[0].set}</span></div>`;
+  } else {
+    const w = outs.filter(x => x === 'win').length, l2 = outs.filter(x => x === 'lose').length, ip = outs.length - w - l2;
+    banner = `<div class="srres ${w > l2 ? 'win' : (l2 > w ? 'lose' : 'prog')}"><b>ALL SETS</b><span class="srscore">${w} W - ${l2} L</span><span class="srvs">${ip ? ip + ' in progress · ' : ''}${sets.length} sets</span></div>`;
+  }
+  const head = `${G.length ? 'Strength: ' + G[0].short + '.  ' : ''}${F.length ? 'Focus: ' + F[0].short + '.' : (G.length || shout.length ? '' : 'No clear strength or gap in this set.')}`;
   const pc = (k, n) => n ? Math.round(100 * k / n) + '%' : '-';
   const row = (name, m, hint) => `<tr class="${m.status || (m.few ? 'few' : '')}"><td>${name}${hint ? `<span class="srhint" title="${hint}"> ⓘ</span>` : ''}</td><td>${m.k} of ${m.n}</td><td>${m.few ? '<span class="srfew">too few to judge</span>' : pc(m.k, m.n)}</td><td>${m.status === 'good' ? '<b class="srg">Good</b>' : (m.status === 'fix' ? '<b class="srf">Fix</b>' : '')}</td></tr>`;
   const byKey = k => M.find(m => m.key === k);
@@ -1343,9 +1385,10 @@ function renReport() {
   const open = S.rpOpen !== false;
   el.innerHTML = `<div class="card srcard">
     <div class="hrow2"><h2>Set Report</h2><span style="display:flex;gap:8px">${fin ? '<button class="btn btn-sm btn-p" onclick="nextSet()">Next Set ▶</button>' : ''}<button class="btn btn-sm btn-o" onclick="S.rpOpen = !(S.rpOpen !== false); renReport()">${open ? '▾ Hide' : '▸ Show'}</button></span></div>
-    <div class="srhead">${head}</div>
+    ${banner}
+    ${head.trim() ? `<div class="srhead">${head}</div>` : ''}
     ${open ? `<div class="srcols">
-      <div class="srcol good"><h3>Good</h3>${G.length ? '<ul>' + li(G) + '</ul>' : '<p class="srnone">Nothing stood out above the targets.</p>'}</div>
+      <div class="srcol good"><h3>Good</h3>${G.length ? '<ul>' + li(G) + '</ul>' : (shout.length ? '' : '<p class="srnone">Nothing stood out above the targets.</p>')}${shout.length ? `<div class="srlab">Shout-outs</div><ul class="srshout">${shout.map(t => `<li>⭐ ${t}</li>`).join('')}</ul>` : ''}</div>
       <div class="srcol fix"><h3>Fix</h3>${F.length ? '<ul>' + li(F) + '</ul>' : '<p class="srnone">Nothing fell below the targets.</p>'}</div>
     </div>
     <div class="srsrc">Our ${o.ourPts} points: ${o.ourPlays} from our kills, aces and blocks, ${o.theirErr} from their errors${o.qUs ? `, ${o.qUs} quick +1` : ''}.  Their ${o.theirPts} points: ${o.theirPlays} from their attacks and aces, ${o.ourErrs} from our logged errors${o.qThem ? `, ${o.qThem} quick +1` : ''}.</div>
@@ -1362,7 +1405,7 @@ function renReport() {
       <p><b>Our logged errors:</b> ${types}.</p>
       <p><b>Serving by player</b> (counts only, too small to judge): ${names.length ? names.join(';  ') : 'none'}.</p>
       <p><b>Their longest run:</b> ${o.run} point${o.run === 1 ? '' : 's'}${o.run ? ` (to ${o.runEnd})` : ''}.</p>
-      <p class="srhint2">Judgments need at least ${SR.MIN} chances. Targets are starting defaults. Opponent attack kills are never counted as our mistakes.</p>
+      <p class="srhint2">Judgments need at least ${SR.MIN} chances. Targets are starting defaults. Opponent attack kills are never counted as our mistakes. Players are named only in shout-outs.</p>
     </details>` : ''}
   </div>`;
 }
