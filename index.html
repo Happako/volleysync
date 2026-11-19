@@ -604,6 +604,27 @@ input:focus,select:focus,textarea:focus{border-color:#00e5ff!important;box-shado
 .srres.prog{border-color:#00e5ff}.srres.prog b,.srres.prog .srscore{color:#00e5ff}
 .srlab{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#b9aee8;margin:8px 0 2px}
 .srshout{list-style:none;padding-left:0!important}.srshout li{margin-bottom:3px}
+
+.rpcard{width:min(940px,96vw);max-height:92vh;display:flex;flex-direction:column;padding:0!important;overflow:hidden}
+.rphead{display:flex;align-items:center;gap:12px;padding:12px 14px 6px;flex-shrink:0}
+.rphead .srres{flex:1;margin:0}
+.rpX{width:52px;height:52px;flex-shrink:0;border-radius:14px;border:2px solid #3b2d70;background:#2a1f5c;color:#fff;font-size:1.4rem;font-weight:800;cursor:pointer}
+#rpBody{overflow:auto;-webkit-overflow-scrolling:touch;padding:4px 18px 12px;flex:1}
+.rpfoot{display:flex;justify-content:flex-end;gap:10px;padding:10px 16px;border-top:2px solid #3b2d70;flex-shrink:0}
+.rvgap{width:14px}
+.rpbtn{background:#2a1f5c!important;color:#fff!important;border:2px solid #c6ff00!important}
+
+/* header: Match / Review read as TABS (flat, underlined, joined to the header line); menu and status are clearly not tabs */
+header{padding-bottom:0!important;align-items:flex-end!important}
+header h1{padding-bottom:10px}
+.tabs{align-items:flex-end;gap:4px}
+.tabs .tab{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;transform:none!important;font-style:normal!important;color:#b9aee8!important;font-weight:600;font-size:1.05rem;min-height:52px;padding:0 22px!important;margin-bottom:-5px;border-bottom:5px solid transparent!important}
+.tabs .tab.active{color:#00e5ff!important;font-weight:800;border-bottom-color:#00e5ff!important}
+.tabs .tab:not(.active):active{color:#fff!important}
+.savedAt{align-self:center;margin:0 6px 0 14px;font-size:.8rem;color:#8f84c8;pointer-events:none}
+.tabs .dotwrap{align-self:center;margin:0 0 6px 10px;padding-left:14px;border-left:1px solid #3b2d70}
+.menubtn{width:48px;height:48px;border-radius:50%;background:transparent;border:2px solid #3b2d70;color:#b9aee8;font-size:1.4rem;line-height:1;cursor:pointer}
+.menubtn:active{border-color:#00e5ff;color:#00e5ff}
 </style>
 </head>
 <body>
@@ -613,7 +634,7 @@ input:focus,select:focus,textarea:focus{border-color:#00e5ff!important;box-shado
     <button class="tab active" id="t-match" onclick="go('match')">Match</button>
     <button class="tab" id="t-review" onclick="go('review')">Review</button>
     <span id="savedAt" class="savedAt"></span>
-    <div class="dotwrap"><button class="tab" onclick="toggleMenu('mainMenu',event)" aria-label="Menu">⋯</button>
+    <div class="dotwrap"><button class="menubtn" onclick="toggleMenu('mainMenu',event)" aria-label="Menu">⋯</button>
       <div id="mainMenu" class="menu">
         <button onclick="openTeam()">👥 Team</button>
         <button onclick="backToStart()">🏁 Start screen</button>
@@ -696,7 +717,6 @@ input:focus,select:focus,textarea:focus{border-color:#00e5ff!important;box-shado
       <div id="rvBar" class="rvbar"></div>
       <div class="seg"><button id="rm-plays" class="on" onclick="setRvMode('plays')">Plays</button><button id="rm-anal" onclick="setRvMode('anal')">Analysis</button></div>
     </div>
-    <div id="rvReport"></div>
     <div id="rvPlays" class="g2">
       <div class="card">
         <div class="hrow2"><h2>Plays</h2><span class="hint">in rally order (#1 = first)</span></div>
@@ -729,7 +749,7 @@ input:focus,select:focus,textarea:focus{border-color:#00e5ff!important;box-shado
     <div id="resOpp" class="resopp"></div>
     <div id="resTeam" class="resteam"></div>
     <div class="resbtns">
-      <button class="btn btn-p" onclick="closeRes();S.rvKey=null;S.rvSet=null;go('review')">Review set</button>
+      <button class="btn btn-p" onclick="closeRes();S.rvKey=null;S.rvSet=null;go('review');openReport()">Review set</button>
       <button class="btn btn-o" onclick="saveFile()">💾 Save File</button>
       <button class="btn btn-o" onclick="closeRes();undo()">↩ Undo last point</button>
       <button class="btn btn-p" onclick="nextSet()">Next Set ▶</button>
@@ -762,6 +782,9 @@ input:focus,select:focus,textarea:focus{border-color:#00e5ff!important;box-shado
       <span style="display:flex;gap:10px"><button class="btn btn-o" onclick="edClose()">Cancel</button><button class="btn btn-p" onclick="edSave()">Save</button></span>
     </div>
   </div>
+</div>
+<div id="rpM" class="modalbg" style="display:none;z-index:300" onclick="if(event.target===this)closeReport()">
+  <div class="card rpcard"><div id="rpHead"></div><div id="rpBody"></div><div id="rpFoot"></div></div>
 </div>
 <div id="dlgM" class="modalbg" style="display:none;z-index:400">
   <div class="card" style="width:min(420px,92vw)">
@@ -1067,7 +1090,7 @@ function showResult(r) {
   el.style.display = 'flex';
 }
 function closeRes() { document.getElementById('resultM').style.display = 'none'; }
-function nextSet() { closeRes(); S.liveFlag = false; go('match'); }
+function nextSet() { closeRes(); closeReport(); S.liveFlag = false; go('match'); }
 function rec(type, lbl) {
   if (result()) return showResult(result());
   if (lbl === 'Opp Error') S.sel = 'OPP';
@@ -1358,9 +1381,10 @@ function reportLogs() {
   return {logs, title: i === 'all' ? 'All sets' : (sel[0] ? sel[0].set : ''), prev: single && i > 0 ? ss[i - 1] : null, last: sel.length ? sel[sel.length - 1] : null};
 }
 function renReport() {
-  const el = document.getElementById('rvReport'); if (!el) return;
+  const mo = document.getElementById('rpM'); if (!mo) return;
+  if (!S.rpModal) { mo.style.display = 'none'; return; }
   const R = reportLogs();
-  if (R.logs.filter(l => l.type !== 'call').length < 5) { el.innerHTML = ''; return; }
+  if (R.logs.filter(l => l.type !== 'call').length < 5) { S.rpModal = false; mo.style.display = 'none'; return; }
   const o = srStats(R.logs), M = srMetrics(o, R.prev ? srStats(R.prev.logs) : null);
   const pick = st => M.filter(m => m.status === st).sort((a, b) => b.dist - a.dist).slice(0, 2);
   const G = pick('good'), F = pick('fix'), li = a => a.length ? a.map(m => `<li>${m.text}</li>`).join('') : null;
@@ -1382,12 +1406,11 @@ function renReport() {
   const names = Object.keys(o.servers).map(id => { const p = S.r.find(x => x.id === +id), e = o.servers[id]; return `${p ? p.name : id}: ${e.err} error${e.err === 1 ? '' : 's'}, ${e.ace} ace${e.ace === 1 ? '' : 's'} in ${e.n} serve${e.n === 1 ? '' : 's'}`; });
   const types = Object.entries(o.errTypes).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', ') || 'none';
   const fin = R.last && R.last === S.m && result();
-  const open = S.rpOpen !== false;
-  el.innerHTML = `<div class="card srcard">
-    <div class="hrow2"><h2>Set Report</h2><span style="display:flex;gap:8px">${fin ? '<button class="btn btn-sm btn-p" onclick="nextSet()">Next Set ▶</button>' : ''}<button class="btn btn-sm btn-o" onclick="S.rpOpen = !(S.rpOpen !== false); renReport()">${open ? '▾ Hide' : '▸ Show'}</button></span></div>
-    ${banner}
+  document.getElementById('rpHead').innerHTML = `<div class="rphead">${banner}<button class="rpX" aria-label="Close report" onclick="closeReport()">✕</button></div>`;
+  document.getElementById('rpBody').innerHTML = `<div class="srcard">
+    <div class="srlab" style="margin:6px 0 4px">Set Report · ${R.title}</div>
     ${head.trim() ? `<div class="srhead">${head}</div>` : ''}
-    ${open ? `<div class="srcols">
+    <div class="srcols">
       <div class="srcol good"><h3>Good</h3>${G.length ? '<ul>' + li(G) + '</ul>' : (shout.length ? '' : '<p class="srnone">Nothing stood out above the targets.</p>')}${shout.length ? `<div class="srlab">Shout-outs</div><ul class="srshout">${shout.map(t => `<li>⭐ ${t}</li>`).join('')}</ul>` : ''}</div>
       <div class="srcol fix"><h3>Fix</h3>${F.length ? '<ul>' + li(F) + '</ul>' : '<p class="srnone">Nothing fell below the targets.</p>'}</div>
     </div>
@@ -1406,9 +1429,17 @@ function renReport() {
       <p><b>Serving by player</b> (counts only, too small to judge): ${names.length ? names.join(';  ') : 'none'}.</p>
       <p><b>Their longest run:</b> ${o.run} point${o.run === 1 ? '' : 's'}${o.run ? ` (to ${o.runEnd})` : ''}.</p>
       <p class="srhint2">Judgments need at least ${SR.MIN} chances. Targets are starting defaults. Opponent attack kills are never counted as our mistakes. Players are named only in shout-outs.</p>
-    </details>` : ''}
+    </details>
   </div>`;
+  document.getElementById('rpFoot').innerHTML = `<div class="rpfoot">${fin ? '<button class="btn btn-p" onclick="nextSet()">Next Set ▶</button>' : ''}<button class="btn btn-o" onclick="closeReport()">Close</button></div>`;
+  mo.style.display = 'flex';
 }
+function openReport() {
+  if (reportLogs().logs.filter(l => l.type !== 'call').length < 5) return say('NOT ENOUGH PLAYS FOR A REPORT YET');
+  S.rpModal = true; renReport();
+}
+function closeReport() { S.rpModal = false; const mo = document.getElementById('rpM'); if (mo) mo.style.display = 'none'; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.rpModal) closeReport(); });
 function renRvBar() {
   const el = document.getElementById('rvBar'); if (!el) return;
   const keys = matchKeys(), cur = rvKey(), ss = rvSets(), sel = rvIdx();
@@ -1416,6 +1447,9 @@ function renRvBar() {
   if (keys.length > 1) h += `<div class="dotwrap"><button class="btn btn-sm btn-o" onclick="toggleMenu('rvMenu',event)">${cur} ▾</button><div id="rvMenu" class="menu" style="left:0;right:auto">${keys.map((k, i) => `<button onclick="pickMatch(${i})">${k}</button>`).join('')}</div></div>`;
   h += ss.map((m, i) => `<button class="btn btn-sm ${sel===i?'btn-p':'btn-o'}" onclick="S.rvSet=${i};S.snapLog=null;upd()">${m.set}${(m === S.m && !m.arch) ? ' •' : ''}</button>`).join('');
   if (ss.length > 1) h += `<button class="btn btn-sm ${sel==='all'?'btn-p':'btn-o'}" onclick="S.rvSet='all';S.snapLog=null;upd()">All</button>`;
+  const lab = sel === 'all' ? 'All sets' : (ss[sel] ? ss[sel].set : '');
+  if (ss.length) h += `<span class="rvgap"></span><button class="btn btn-sm rpbtn" onclick="openReport()">📋 ${lab} Report</button>`;
+  if (result()) h += `<button class="btn btn-sm btn-p" onclick="nextSet()">Next Set ▶</button>`;
   el.innerHTML = h;
 }
 function renTL(id, rev, mode) {
