@@ -959,6 +959,7 @@ function rec(type, lbl) {
   if (lbl === 'Opp Error') S.sel = 'OPP';
   if (S.sel === null && ['Service Ace', 'Serve Err', 'Good Serve'].includes(lbl)) S.sel = S.m.srv === 'us' ? S.m.court[0] : 'OPP';
   if (S.sel === null) return say('👆 TAP A PLAYER FIRST');
+  if (S.sel === 'OPP' && S.m.srv === 'us' && ['Service Ace', 'Serve Err'].includes(lbl)) return say('⚠ WE ARE SERVING');
   if (typeof S.sel === 'number') { const bn = banned(lbl, S.sel); if (bn) return say('⚠ ' + bn); }
   const snap = [...S.m.court], svB = S.m.srv, pUs = S.m.us, pThem = S.m.them, rn0 = S.m.rn || 0; let rotd = false;
   const isOpp = (S.sel === 'OPP');
@@ -1063,11 +1064,12 @@ function banned(lbl, pid) {
 function renAct() {
   const el = document.getElementById('actPanel'); if (!el) return;
   const o = S.sel === 'OPP', pl = (!o && S.sel !== null) ? S.r.find(p => p.id === S.sel) : null;
-  const B = (cls, type, lbl, txt, ex) => { const off = pl && banned(lbl, pl.id); return `<button class="abtn ${cls}${ex ? ' ' + ex : ''}${off ? ' off' : ''}"${off ? ' disabled' : ''} onclick="rec('${type}','${lbl}')">${txt}</button>`; };
+  const B = (cls, type, lbl, txt, ex) => { const off = pl ? banned(lbl, pl.id) : (o && S.m.srv === 'us' && ['Service Ace', 'Serve Err'].includes(lbl)); return `<button class="abtn ${cls}${ex ? ' ' + ex : ''}${off ? ' off' : ''}"${off ? ' disabled' : ''} onclick="rec('${type}','${lbl}')">${txt}</button>`; };
   const grp = (t, col, arr) => `<div class="glabel" style="color:${col}">${t}</div><div class="alist">${arr.join('')}</div>`;
   let h;
   if (o) {
     h = `<div class="selchip opp"><div class="av oppav">OPP</div><b>Opponent</b><button onclick="clearSel()">✕</button></div>`
+      + (S.m.srv === 'us' ? '<div class="actnote">We are serving: no opponent Ace / Serve Err.</div>' : '')
       + grp('OPPONENT SCORES (+1 OPP)', 'var(--e)', [B('ae','good','Attack Kill','⚡ Attack'), B('ae','good','Service Ace','🎯 Ace'), B('ae','good','Opp Other','• Other','span2')])
       + grp('OPPONENT ERROR (+1 US)', 'var(--g)', [B('ag','err','Serve Err','❌ Serve Err'), B('ag','err','Opp Out','• Other')]);
   } else {
