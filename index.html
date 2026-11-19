@@ -502,12 +502,23 @@ body::after{display:none}
 
 .abtn:disabled,.abtn.off{opacity:.25;filter:grayscale(1);box-shadow:none;cursor:not-allowed}
 .actnote{font-size:.72rem;color:#b9aee8;margin:-2px 0 8px;line-height:1.3}
-.oppSv{position:absolute;left:50%;top:5%;z-index:6;transform:translateX(-50%) skew(-8deg);background:#c6ff00;color:#000;font-size:1.5rem;font-weight:900;font-style:italic;letter-spacing:.04em;padding:8px 26px;border-radius:10px;white-space:nowrap;box-shadow:3px 3px 0 #000;animation:svp 1.1s ease-in-out infinite;pointer-events:none}
-@keyframes svp{50%{box-shadow:0 0 14px rgba(198,255,0,.95),2px 2px 0 #000}}
+.oppSv{position:absolute;left:50%;top:5%;z-index:6;transform:translateX(-50%) skew(-8deg);background:#ff2e93;color:#fff;font-size:1.5rem;font-weight:900;font-style:italic;letter-spacing:.04em;padding:8px 26px;border-radius:10px;white-space:nowrap;box-shadow:3px 3px 0 #000;animation:svp 1.1s ease-in-out infinite;pointer-events:none}
+@keyframes svp{50%{box-shadow:0 0 14px rgba(255,46,147,.95),2px 2px 0 #000}}
 .arsvg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4}
 .arsvg line{stroke-width:3;vector-effect:non-scaling-stroke;opacity:.85}
 .arsvg polygon{opacity:.95}
 #heatModes{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+
+.stag,.stag2{background:#c6ff00!important;color:#000!important}
+.cpos.srv{border-color:#c6ff00!important;background:rgba(40,54,10,.9)!important}
+.lrow:first-child{border-left:5px solid rgba(0,229,255,.45)!important}
+.lrow.act{border-left:5px solid #00e5ff!important}
+.bdg.bu{background:#c6ff00;color:#000}.bdg.bo{background:#ff2e93;color:#fff}
+.bdg.mis{font-weight:800;border:2px solid;padding:1px 8px}
+.bdg.bu.mis{background:rgba(198,255,0,.16);color:#d8ff4d;border-color:#c6ff00}
+.bdg.bo.mis{background:rgba(255,46,147,.22);color:#ff8ac4;border-color:#ff2e93}
+.tchip{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:28px;border-radius:8px;margin-right:8px;flex-shrink:0;font-size:.62rem;font-weight:900;font-style:italic}
+.tchip.bu{background:#c6ff00;color:#000}.tchip.bo{background:#ff2e93;color:#fff}
 </style>
 </head>
 <body>
@@ -1191,14 +1202,15 @@ function renTL(id, rev, mode) {
   const multi = mode !== 'live' && rvSel().length > 1;
   if (!arr.length) { el.innerHTML = '<div style="padding:14px;color:var(--m);text-align:center">No plays yet.</div>'; return; }
   el.innerHTML = arr.map(l => {
-    const bc = l.type === 'good' ? 'bg' : (l.type === 'err' ? 'be' : 'bc');
+    const opp = l.pid === 'OPP', pt = l.lbl === 'Point', mis = !pt && l.type !== 'call' && (opp ? l.type === 'good' : l.type === 'err');
+    const bc = l.type === 'call' ? 'bc' : `${opp ? 'bo' : 'bu'}${mis ? ' mis' : ''}`;
     const sc = l.type === 'call' ? `(${l.us}-${l.them})` : `${l.us} - ${l.them}`;
     const q = S.r.find(z => z.id === l.pid);
-    const av = q ? `<span class="av" style="width:28px;height:28px;margin-right:8px;flex-shrink:0">${avHTML(q)}</span>` : '';
+    const av = q ? `<span class="av" style="width:28px;height:28px;margin-right:8px;flex-shrink:0">${avHTML(q)}</span>` : (l.type === 'call' ? '' : `<span class="tchip ${opp ? 'bo' : 'bu'}">${opp ? 'OPP' : 'US'}</span>`);
     const chip = multi ? `<span class="setchip">${SETOF.get(l)}</span>` : '';
     const oc = mode === 'live' ? `rowMenu(${l.id})` : `insp(${l.id},this)`;
     const n = mode === 'live' ? S.m.logs.indexOf(l) + 1 : (IDX.get(l) || '');
-    return `<div class="lrow" onclick="${oc}"><span class="rn">#${n}</span><span style="font-weight:800;min-width:78px;white-space:nowrap;padding-right:8px">${sc}</span>${chip}${av}<span style="flex:1;font-weight:600">${l.pname}</span><span class="bdg ${bc}">${l.lbl}</span></div>`;
+    return `<div class="lrow" onclick="${oc}"><span class="rn">#${n}</span><span style="font-weight:800;min-width:78px;white-space:nowrap;padding-right:8px">${sc}</span>${chip}${av}<span style="flex:1;font-weight:600">${l.pname}</span><span class="bdg ${bc}">${mis ? '✕ ' : ''}${pt ? '+1' : l.lbl}</span></div>`;
   }).join('');
 }
 function insp(id, el) {
