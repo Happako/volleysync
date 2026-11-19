@@ -562,6 +562,25 @@ input:focus,select:focus,textarea:focus{border-color:#00e5ff!important;box-shado
 #actPanel[data-t=us] .ae{background:rgba(198,255,0,.14);color:#d8ff4d;border:3px solid #c6ff00;box-shadow:none}
 #actPanel[data-t=opp] .ag,#actPanel .abtn.oe{background:rgba(255,46,147,.2);color:#ff8ac4;border:3px solid #ff2e93;box-shadow:none}
 #actPanel .abtn.off{filter:grayscale(1)}
+
+.srcard{margin-bottom:14px}
+.srhead{font-weight:800;font-size:1.05rem;margin:2px 0 10px;color:#fff}
+.srcols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}
+.srcol{border-radius:12px;padding:10px 14px;border:3px solid;background:#120c2e}
+.srcol h3{margin:0 0 6px;font-size:.9rem;letter-spacing:.06em;text-transform:uppercase}
+.srcol ul{margin:0;padding-left:18px;font-size:.95rem;line-height:1.45}.srcol li{margin-bottom:4px}
+.srcol.good{border-color:#c6ff00}.srcol.good h3{color:#c6ff00}
+.srcol.fix{border-color:#ffb020}.srcol.fix h3{color:#ffb020}
+.srnone{margin:0;color:#b9aee8;font-size:.88rem}
+.srsrc{font-size:.85rem;color:#b9aee8;margin:4px 0}
+.srwarn{font-size:.85rem;color:#ffb020;margin:4px 0}
+.srtab{width:100%;border-collapse:collapse;margin-top:8px;font-size:.92rem}
+.srtab td,.srtab th{padding:6px 8px;text-align:left}
+.srtab tr.few td{color:#8b80b8}.srfew{font-size:.8rem;font-style:italic}
+.srg{color:#c6ff00}.srf{color:#ffb020}.srhint{color:#00e5ff;cursor:help}
+.srdet{margin-top:8px;font-size:.88rem}.srdet summary{cursor:pointer;color:#00e5ff;font-weight:700;padding:6px 0}
+.srhint2{color:#b9aee8;font-size:.8rem}
+@media(max-width:700px){.srcols{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -654,6 +673,7 @@ input:focus,select:focus,textarea:focus{border-color:#00e5ff!important;box-shado
       <div id="rvBar" class="rvbar"></div>
       <div class="seg"><button id="rm-plays" class="on" onclick="setRvMode('plays')">Plays</button><button id="rm-anal" onclick="setRvMode('anal')">Analysis</button></div>
     </div>
+    <div id="rvReport"></div>
     <div id="rvPlays" class="g2">
       <div class="card">
         <div class="hrow2"><h2>Plays</h2><span class="hint">in rally order (#1 = first)</span></div>
@@ -684,7 +704,7 @@ input:focus,select:focus,textarea:focus{border-color:#00e5ff!important;box-shado
     <div id="resOpp" class="resopp"></div>
     <div id="resTeam" class="resteam"></div>
     <div class="resbtns">
-      <button class="btn btn-o" onclick="closeRes();go('review')">Review</button>
+      <button class="btn btn-p" onclick="closeRes();S.rvKey=null;S.rvSet=null;go('review')">Review set</button>
       <button class="btn btn-o" onclick="saveFile()">💾 Save File</button>
       <button class="btn btn-o" onclick="closeRes();undo()">↩ Undo last point</button>
       <button class="btn btn-p" onclick="nextSet()">Next Set ▶</button>
@@ -1230,6 +1250,106 @@ function rvIdx() { const n = rvSets().length; return S.rvSet === 'all' ? 'all' :
 function rvSel() { const ss = rvSets(), i = rvIdx(); return i === 'all' ? ss : (ss[i] ? [ss[i]] : []); }
 function rvLogs() { SETOF.clear(); IDX.clear(); const out = []; rvSel().forEach(m => m.logs.forEach((l, i) => { SETOF.set(l, m.set); IDX.set(l, i + 1); out.push(l); })); return out; }
 function pickMatch(i) { S.rvKey = matchKeys()[i]; S.rvSet = null; S.snapLog = null; upd(); }
+/* ---------- Set Report ----------
+   Only rally-ending events are logged, so receive quality is measured through breakdowns only.
+   We never blame the team for opponent Attack Kills. Thresholds are starting defaults: [good, fix]. */
+const SR = {MIN: 8, serveErr: [.15, .25], recvFail: [.20, .35], ownErr: [.35, .50], kill: [.65, .45], sideout: [.50, .35]};
+function srStats(logs) {
+  const L = logs.filter(l => l.type !== 'call'), mine = l => typeof l.pid === 'number', opp = l => l.pid === 'OPP', qk = l => l.lbl === 'Point';
+  const o = {rallies: L.length};
+  const ourPlays = L.filter(l => mine(l) && l.type === 'good'), theirErr = L.filter(l => opp(l) && l.type === 'good' && !qk(l));
+  const qUs = L.filter(l => qk(l) && l.type === 'good'), qThem = L.filter(l => qk(l) && l.type === 'err');
+  const theirPlays = L.filter(l => opp(l) && l.type === 'err' && !qk(l)), ourErrs = L.filter(l => mine(l) && l.type === 'err');
+  Object.assign(o, {ourPts: L.filter(l => l.type === 'good').length, theirPts: L.filter(l => l.type === 'err').length,
+    ourPlays: ourPlays.length, theirErr: theirErr.length, qUs: qUs.length, theirPlays: theirPlays.length, ourErrs: ourErrs.length, qThem: qThem.length});
+  o.errTypes = {}; ourErrs.forEach(l => { o.errTypes[l.lbl] = (o.errTypes[l.lbl] || 0) + 1; });
+  const sv = L.filter(l => l.svB === 'us'), tv = L.filter(l => l.svB === 'them');
+  o.serves = sv.length; o.serveErr = sv.filter(l => mine(l) && l.lbl === 'Serve Err').length; o.aces = sv.filter(l => mine(l) && l.lbl === 'Service Ace').length;
+  o.theirServes = tv.length; o.recvFail = tv.filter(l => (opp(l) && l.lbl === 'Service Ace') || (mine(l) && l.lbl === 'Receive Err')).length;
+  o.sideout = tv.filter(l => l.type === 'good').length;
+  o.kills = L.filter(l => mine(l) && l.type === 'good' && l.lbl === 'Attack Kill').length; o.atkErr = L.filter(l => mine(l) && l.type === 'err' && l.lbl === 'Attack Err').length;
+  let run = 0, best = 0, end = ''; L.forEach(l => { if (l.type === 'err') { run++; if (run > best) { best = run; end = `${l.us}-${l.them}`; } } else run = 0; });
+  o.run = best; o.runEnd = end;
+  o.servers = {}; sv.forEach(l => { const id = l.snap && l.snap[0]; if (id == null) return; const e = o.servers[id] || (o.servers[id] = {n: 0, err: 0, ace: 0}); e.n++; if (mine(l) && l.pid === id) { if (l.lbl === 'Serve Err') e.err++; if (l.lbl === 'Service Ace') e.ace++; } });
+  return o;
+}
+function srMetrics(o, prev) {
+  const pl = (n, w) => n + ' ' + w + (n === 1 ? '' : 's'), M = [];
+  const add = (key, short, k, n, dir, th, g, f, pk, pn) => M.push({key, short, k, n, dir, th, g, f, rate: n ? k / n : 0, few: n < SR.MIN, pk, pn});
+  const P = prev || {};
+  add('serve', 'serving', o.serveErr, o.serves, 'low', SR.serveErr,
+      `Serving: ${o.serveErr} error${o.serveErr === 1 ? '' : 's'} in ${pl(o.serves, 'serve')}${o.aces ? `, with ${pl(o.aces, 'ace')}` : ''}.`,
+      `Serve errors: ${o.serveErr} of ${pl(o.serves, 'serve')} missed.`, P.serveErr, P.serves);
+  add('recv', 'serves that ended against us', o.recvFail, o.theirServes, 'low', SR.recvFail,
+      `Their serves: only ${o.recvFail} of ${o.theirServes} ended the rally against us.`,
+      `Serves that ended the rally against us: ${o.recvFail} of ${o.theirServes} of their serves (aces against us and logged receive errors).`, P.recvFail, P.theirServes);
+  const top = Object.entries(o.errTypes).sort((a, b) => b[1] - a[1])[0], mostly = top && top[1] / o.ourErrs >= .5 ? `, mostly ${top[0]}` : '';
+  add('own', 'own errors', o.ourErrs, o.theirPts, 'low', SR.ownErr,
+      `Only ${o.ourErrs} of their ${o.theirPts} points came from our logged errors.`,
+      `${o.ourErrs} of their ${o.theirPts} points came from our logged errors${mostly}.`, P.ourErrs, P.theirPts);
+  add('kill', 'attacking', o.kills, o.kills + o.atkErr, 'high', SR.kill,
+      `Attacking: ${pl(o.kills, 'kill')} and ${pl(o.atkErr, 'attack error')}.`,
+      `Attack errors: ${o.atkErr} against ${pl(o.kills, 'kill')}.`, P.kills, P.kills != null ? P.kills + P.atkErr : null);
+  add('side', 'side-out', o.sideout, o.theirServes, 'high', SR.sideout,
+      `Side-out: we won ${o.sideout} of ${o.theirServes} rallies on their serve.`,
+      `Side-out: we won only ${o.sideout} of ${o.theirServes} rallies on their serve.`, P.sideout, P.theirServes);
+  M.forEach(m => {
+    const [g, f] = m.th; m.status = '';
+    if (!m.few) {
+      if (m.dir === 'low') { if (m.rate <= g) { m.status = 'good'; m.dist = g - m.rate; } else if (m.rate >= f) { m.status = 'fix'; m.dist = m.rate - f; } }
+      else { if (m.rate >= g) { m.status = 'good'; m.dist = m.rate - g; } else if (m.rate <= f) { m.status = 'fix'; m.dist = f - m.rate; } }
+    }
+    m.text = m.status === 'good' ? m.g : m.f;
+    if (m.status && m.pn != null && m.pn >= SR.MIN && Math.abs(m.rate - m.pk / m.pn) >= .15) m.text += ` (previous set: ${m.pk} of ${m.pn})`;
+  });
+  return M;
+}
+function reportLogs() {
+  const sel = rvSel(), ss = rvSets(), i = rvIdx(), logs = []; sel.forEach(m => logs.push(...m.logs));
+  const single = i !== 'all' && sel.length === 1;
+  return {logs, title: i === 'all' ? 'All sets' : (sel[0] ? sel[0].set : ''), prev: single && i > 0 ? ss[i - 1] : null, last: sel.length ? sel[sel.length - 1] : null};
+}
+function renReport() {
+  const el = document.getElementById('rvReport'); if (!el) return;
+  const R = reportLogs();
+  if (R.logs.filter(l => l.type !== 'call').length < 5) { el.innerHTML = ''; return; }
+  const o = srStats(R.logs), M = srMetrics(o, R.prev ? srStats(R.prev.logs) : null);
+  const pick = st => M.filter(m => m.status === st).sort((a, b) => b.dist - a.dist).slice(0, 2);
+  const G = pick('good'), F = pick('fix'), li = a => a.length ? a.map(m => `<li>${m.text}</li>`).join('') : null;
+  const last = R.logs[R.logs.length - 1], score = last ? `${last.us}-${last.them}` : '';
+  const head = `${R.title}  ${score}.  ${G.length ? 'Strength: ' + G[0].short + '.  ' : ''}${F.length ? 'Focus: ' + F[0].short + '.' : (G.length ? '' : 'No clear strength or gap in this set.')}`;
+  const pc = (k, n) => n ? Math.round(100 * k / n) + '%' : '-';
+  const row = (name, m, hint) => `<tr class="${m.status || (m.few ? 'few' : '')}"><td>${name}${hint ? `<span class="srhint" title="${hint}"> ⓘ</span>` : ''}</td><td>${m.k} of ${m.n}</td><td>${m.few ? '<span class="srfew">too few to judge</span>' : pc(m.k, m.n)}</td><td>${m.status === 'good' ? '<b class="srg">Good</b>' : (m.status === 'fix' ? '<b class="srf">Fix</b>' : '')}</td></tr>`;
+  const byKey = k => M.find(m => m.key === k);
+  const unc = o.qUs + o.qThem, partial = (o.ourPts + o.theirPts) && unc / (o.ourPts + o.theirPts) >= .25;
+  const names = Object.keys(o.servers).map(id => { const p = S.r.find(x => x.id === +id), e = o.servers[id]; return `${p ? p.name : id}: ${e.err} error${e.err === 1 ? '' : 's'}, ${e.ace} ace${e.ace === 1 ? '' : 's'} in ${e.n} serve${e.n === 1 ? '' : 's'}`; });
+  const types = Object.entries(o.errTypes).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', ') || 'none';
+  const fin = R.last && R.last === S.m && result();
+  el.innerHTML = `<div class="card srcard">
+    <div class="hrow2"><h2>Set Report</h2>${fin ? '<button class="btn btn-sm btn-p" onclick="nextSet()">Next Set ▶</button>' : ''}</div>
+    <div class="srhead">${head}</div>
+    <div class="srcols">
+      <div class="srcol good"><h3>Good</h3>${G.length ? '<ul>' + li(G) + '</ul>' : '<p class="srnone">Nothing stood out above the targets.</p>'}</div>
+      <div class="srcol fix"><h3>Fix</h3>${F.length ? '<ul>' + li(F) + '</ul>' : '<p class="srnone">Nothing fell below the targets.</p>'}</div>
+    </div>
+    <div class="srsrc">Our ${o.ourPts} points: ${o.ourPlays} from our kills, aces and blocks, ${o.theirErr} from their errors${o.qUs ? `, ${o.qUs} quick +1` : ''}.  Their ${o.theirPts} points: ${o.theirPlays} from their attacks and aces, ${o.ourErrs} from our logged errors${o.qThem ? `, ${o.qThem} quick +1` : ''}.</div>
+    ${partial ? `<div class="srwarn">${Math.round(100 * unc / (o.ourPts + o.theirPts))}% of points had no cause logged (quick +1), so these numbers are partial.</div>` : ''}
+    ${o.run >= 5 ? `<div class="srsrc">They scored ${o.run} in a row (to ${o.runEnd}).</div>` : ''}
+    <table class="srtab"><thead><tr><th>Measure</th><th>Count</th><th>Rate</th><th></th></tr></thead><tbody>
+      ${row('Serve errors', byKey('serve'))}
+      ${row('Serves that ended against us', byKey('recv'), "Successful passes aren't logged, so this shows breakdowns only (aces against us plus logged receive errors).")}
+      ${row('Their points from our logged errors', byKey('own'))}
+      ${row('Kills vs attack errors', byKey('kill'))}
+      ${row('Side-out (we won their serve)', byKey('side'))}
+    </tbody></table>
+    <details class="srdet"><summary>Details</summary>
+      <p><b>Our logged errors:</b> ${types}.</p>
+      <p><b>Serving by player</b> (counts only, too small to judge): ${names.length ? names.join(';  ') : 'none'}.</p>
+      <p><b>Their longest run:</b> ${o.run} point${o.run === 1 ? '' : 's'}${o.run ? ` (to ${o.runEnd})` : ''}.</p>
+      <p class="srhint2">Judgments need at least ${SR.MIN} chances. Targets are starting defaults. Opponent attack kills are never counted as our mistakes.</p>
+    </details>
+  </div>`;
+}
 function renRvBar() {
   const el = document.getElementById('rvBar'); if (!el) return;
   const keys = matchKeys(), cur = rvKey(), ss = rvSets(), sel = rvIdx();
@@ -1271,7 +1391,7 @@ function upd() {
   document.getElementById('dThem').style.display = S.m.srv === 'them' ? 'inline-block' : 'none';
   document.getElementById('lCourt').innerHTML = liveHTML(); renTL('lTime', true, 'live'); renAct(); renRibbon(); renBench();
   document.getElementById('rTitle').textContent = `${S.m.date} vs ${S.m.opp} (${S.m.set}: ${S.m.us}-${S.m.them})`;
-  renRvBar(); renTL('rTime', false, 'rv');
+  renRvBar(); renReport(); renTL('rTime', false, 'rv');
   { const sa = document.getElementById('savedAt'); if (sa) { const d = new Date(); sa.textContent = '✓'; sa.title = 'Auto-saved ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); } }
   document.getElementById('sBody').innerHTML = S.r.map(p => {
     const pl = rvLogs().filter(l => l.pid === p.id);
