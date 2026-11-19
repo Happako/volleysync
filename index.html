@@ -519,6 +519,12 @@ body::after{display:none}
 .bdg.bo.mis{background:rgba(255,46,147,.22);color:#ff8ac4;border-color:#ff2e93}
 .tchip{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:28px;border-radius:8px;margin-right:8px;flex-shrink:0;font-size:.62rem;font-weight:900;font-style:italic}
 .tchip.bu{background:#c6ff00;color:#000}.tchip.bo{background:#ff2e93;color:#fff}
+
+.evsvg line{stroke:#fff!important}
+.evm.from,.evm.to{color:#fff!important}
+.hdot.hl{background:rgba(198,255,0,.55)}.hdot.hp{background:rgba(255,46,147,.55)}
+.hdot.ring{background:transparent!important;border:3px solid;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:900;line-height:1;text-shadow:0 0 4px #000}
+.hdot.hl.ring{border-color:#c6ff00;color:#c6ff00}.hdot.hp.ring{border-color:#ff2e93;color:#ff8ac4}
 </style>
 </head>
 <body>
@@ -1296,18 +1302,18 @@ function renSnap() {
   const shown = arrows.filter(x => h === 'def' || S.heatP == null || x.pid === S.heatP);
   const HR = TH / 100, L = 3.4, W = 1.7;
   shown.forEach(x => {
-    const a = evXY(x.ev.from), b = evXY(x.ev.to), ours = x.type === 'good', col = ours ? '#c6ff00' : '#ff2e93';
+    const a = evXY(x.ev.from), b = evXY(x.ev.to), mis = h === 'def' ? x.type === 'good' : x.type === 'err', col = h === 'def' ? '#ff2e93' : '#c6ff00';
     const dx = b[0] - a[0], dy = (b[1] - a[1]) * HR, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
     const bx = b[0] - ux * L, by = b[1] - uy * L, px = -uy * W, py = ux * W;
-    svg += `<line x1="${a[0]}" y1="${a[1]}" x2="${bx}" y2="${by / HR}" stroke="${col}"/>`
+    svg += `<line x1="${a[0]}" y1="${a[1]}" x2="${bx}" y2="${by / HR}" stroke="${col}"${mis ? ' stroke-dasharray="7 6"' : ''}/>`
         + `<polygon points="${b[0]},${b[1]} ${bx + px},${(by + py) / HR} ${bx - px},${(by - py) / HR}" fill="${col}" stroke="none"/>`;
-    dots += `<i class="hdot ${ours ? 'grn' : 'red'}" style="left:${b[0]}%;top:${b[1]}%"></i>`;
-    n++; if (ours) nPt++;
+    dots += `<i class="hdot ${h === 'def' ? 'hp' : 'hl'}${mis ? ' ring' : ''}" style="left:${b[0]}%;top:${b[1]}%">${mis ? '✕' : ''}</i>`;
+    n++; if (mis) nPt++;
   });
   const chips = h === 'off' && pids.length ? [`<button class="btn btn-sm ${S.heatP == null ? 'btn-p' : 'btn-o'}" onclick="setHeatP(null)">All</button>`].concat(pids.map(id => { const p = S.r.find(q => q.id === id); return `<button class="btn btn-sm ${S.heatP === id ? 'btn-p' : 'btn-o'}" onclick="setHeatP(${id})">${p ? p.name : id}</button>`; })).join('') : '';
   document.getElementById('heatModes').innerHTML = [['def', 'Defense'], ['off', 'Offense']].map(([k, t]) => `<button class="btn btn-sm ${h===k?'btn-p':'btn-o'}" onclick="setHeat('${k}')">${t}</button>`).join('') + (chips ? `<span style="width:12px"></span>${chips}` : '');
   document.getElementById('heatCap').textContent = n
-    ? (h === 'def' ? `Defense: ${n} opponent attacks, from where they hit to where the ball landed (pink = their point, lime = ours)` : `Offense: ${n} of our attacks, from the player's position to where the ball landed (lime = our point, pink = their point)`)
+    ? (h === 'def' ? `Defense: ${n} opponent attacks (pink), from where they hit to where the ball landed. Solid = their point, dashed with ✕ = their error (${nPt})` : `Offense: ${n} of our attacks (lime), from the player's position to where the ball landed. Solid = our point, dashed with ✕ = our error (${nPt})`)
     : (h === 'def' ? 'Defense: no opponent attacks with both a hit-from point and a landing point yet.' : 'Offense: no attacks with a landing point yet.');
   document.getElementById('aCourt').innerHTML = fullCourtHTML('', null, false, `<svg class="arsvg" viewBox="0 0 100 100" preserveAspectRatio="none">${svg}</svg>` + dots);
 }
