@@ -607,6 +607,7 @@ body::after{display:none}
       </div>
       <div class="card">
         <p id="snapCap" style="font-size:.9rem;color:var(--p);font-weight:700;margin:0 0 6px">Select a play on the left.</p>
+        <button id="snapEdit" class="btn btn-sm btn-o" style="display:none;margin-bottom:6px" onclick="if(S.snapLog)openEdit(S.snapLog.id)">✎ Edit this play</button>
         <div id="rCourt"></div>
       </div>
     </div>
@@ -648,6 +649,19 @@ body::after{display:none}
   <div class="card" style="width:min(900px,96vw);max-height:90vh;overflow:auto" onclick="event.stopPropagation()">
     <div class="hrow2"><h2>Team</h2><button class="btn btn-p btn-sm" onclick="closeTeam()">Done</button></div>
     <div class="r-grid" id="rosterBox"></div>
+  </div>
+</div>
+<div id="editM" class="modalbg" style="display:none;z-index:380">
+  <div class="card" style="width:min(760px,96vw);max-height:94vh;overflow:auto">
+    <div id="edTitle" style="font-weight:800;font-size:1.05rem;margin-bottom:10px"></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <div id="edCourt" style="width:230px;flex-shrink:0"></div>
+      <div id="edCtl" style="flex:1;min-width:260px"></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:space-between;margin-top:12px;align-items:center">
+      <button class="btn btn-o" id="edDel" onclick="edDelete()">🗑 Delete from here</button>
+      <span style="display:flex;gap:10px"><button class="btn btn-o" onclick="edClose()">Cancel</button><button class="btn btn-p" onclick="edSave()">Save</button></span>
+    </div>
   </div>
 </div>
 <div id="dlgM" class="modalbg" style="display:none;z-index:400">
@@ -1001,7 +1015,75 @@ let _rt = null;
 function showRecToast(t) { document.getElementById('recTxt').textContent = t; const el = document.getElementById('recToast'); el.classList.add('show'); clearTimeout(_rt); _rt = setTimeout(hideRecToast, 4500); }
 function hideRecToast() { document.getElementById('recToast').classList.remove('show'); }
 function undoTo(id) { let n = 0; while (S.m.logs.length && n++ < 500) { const last = S.m.logs[S.m.logs.length - 1].id; undo(); if (last === id) break; } }
-function rowMenu(id) { askConfirm('Remove this play and every play after it?', () => undoTo(id)); }
+function rowMenu(id) {
+  const l = S.m.logs.find(x => x.id === id);
+  if (l && l.lbl !== 'Point' && l.type !== 'call') openEdit(id); else askConfirm('Remove this play and every play after it?', () => undoTo(id));
+}
+let EDT = null;
+const EDL = {'Attack Kill':'⚡ Kill','Service Ace':'🎯 Ace','Block Point':'🧱 Block','Attack Err':'Attack Err','Serve Err':'Serve Err','Receive Err':'Recv Err','Set Err':'Set Err','Net / Foul':'Net/Foul','Opp Error':'Opp Error','Opp Out':'Other','Opp Other':'Other'};
+function edOptions(l) {
+  if (l.pid === 'OPP') return l.type === 'good' ? ['Opp Error', 'Serve Err', 'Opp Out'] : ['Attack Kill', 'Service Ace', 'Opp Other'];
+  return l.type === 'good' ? ['Attack Kill', 'Service Ace', 'Block Point'] : ['Attack Err', 'Serve Err', 'Receive Err', 'Set Err', 'Net / Foul'];
+}
+function openEdit(id) {
+  const owner = allSetObjs().find(m => m.logs.some(x => x.id === id)); if (!owner) return;
+  const l = owner.logs.find(x => x.id === id);
+  if (!l || l.lbl === 'Point' || l.type === 'call') return say('NOTHING TO EDIT HERE');
+  if (mkey(owner) !== mkey(S.m)) return say('ONLY THE CURRENT MATCH CAN BE EDITED');
+  EDT = {l, owner, idx: owner.logs.indexOf(l) + 1, pid: l.pid, lbl: l.lbl, mode: 'from', ev: {from: l.ev && l.ev.from ? {...l.ev.from} : null, to: l.ev && l.ev.to ? {...l.ev.to} : null}};
+  document.getElementById('editM').style.display = 'flex'; renEdit();
+}
+function edCtx() { return {srv: EDT.l.svB, court: EDT.l.snap}; }
+function edBan(lbl, pid) {
+  if (pid === 'OPP') return EDT.l.svB === 'us' && ['Service Ace', 'Serve Err'].includes(lbl) ? 'x' : '';
+  return typeof pid === 'number' ? banned(lbl, pid, edCtx()) : '';
+}
+function renEdit() {
+  const E = EDT, l = E.l;
+  document.getElementById('edTitle').textContent = `Edit play #${E.idx}   ${l.us}-${l.them}   ${l.pname}`;
+  document.getElementById('edDel').style.display = E.owner === S.m ? '' : 'none';
+  const chip = (on, dis, fn, txt) => `<button class="btn btn-sm ${on ? 'btn-p' : 'btn-o'}"${dis ? ' disabled style="opacity:.3"' : ''} onclick="${fn}">${txt}</button>`;
+  let h = '';
+  if (typeof l.pid === 'number') {
+    h += '<div class="glabel" style="color:var(--g)">PLAYER</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">'
+      + l.snap.map(id => { const p = S.r.find(x => x.id === id); return p ? chip(E.pid === id, !!banned(E.lbl, id, edCtx()), `edPlayer(${id})`, p.name) : ''; }).join('') + '</div>';
+  }
+  h += '<div class="glabel" style="color:var(--g)">ACTION</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">'
+    + edOptions(l).map(a => chip(E.lbl === a, !!edBan(a, E.pid), `edAct('${a}')`, EDL[a] || a)).join('') + '</div>';
+  h += '<div class="glabel" style="color:var(--g)">BALL PATH (tap the court to set the selected point)</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">'
+    + chip(E.mode === 'from', false, "edMode('from')", '① Hit from' + (E.ev.from ? ' ✓' : '')) + (E.ev.from ? chip(false, false, "edClr('from')", '✕') : '')
+    + chip(E.mode === 'to', false, "edMode('to')", '② Landed' + (E.ev.to ? ' ✓' : '')) + (E.ev.to ? chip(false, false, "edClr('to')", '✕') : '') + '</div>'
+    + '<div style="font-size:.78rem;color:#b9aee8">For a serve, tap behind the end line of the serving side for ①. The court is the same as in Live: top is their side.</div>';
+  document.getElementById('edCtl').innerHTML = h;
+  const f = E.ev.from && E.ev.from.s === 'us' ? evXY(E.ev.from) : null;
+  const extra = f ? `<div class="evm from" style="left:${f[0]}%;top:${f[1]}%">●</div>` : '';
+  const html = fullCourtHTML(gridTokens(l.snap, l.svB, {}), E.ev, false, extra, l.svB).replace('<div class="fc2">', '<div class="fc2" onpointerup="editTap(event)" style="cursor:crosshair">');
+  document.getElementById('edCourt').innerHTML = html;
+}
+function edPlayer(id) { EDT.pid = id; renEdit(); }
+function edAct(a) { EDT.lbl = a; renEdit(); }
+function edMode(m) { EDT.mode = m; renEdit(); }
+function edClr(k) { EDT.ev[k] = null; EDT.mode = k; renEdit(); }
+function editTap(e) {
+  if (e.pointerType === 'mouse' && e.button > 0) return;
+  const r = e.currentTarget.getBoundingClientRect(), fx = (e.clientX - r.left) / r.width, y = ((e.clientY - r.top) / r.height) * TH;
+  if (Math.abs(y - OH) < 1.5) return;
+  EDT.ev[EDT.mode] = y < OH ? {s:'opp', x:+fx.toFixed(3), y:+((OH - y) / OH).toFixed(3)} : {s:'us', x:+fx.toFixed(3), y:+((y - OH) / 100).toFixed(3)};
+  if (EDT.mode === 'from' && !EDT.ev.to) EDT.mode = 'to';
+  renEdit();
+}
+function edClose() { document.getElementById('editM').style.display = 'none'; EDT = null; }
+function edSave() {
+  const E = EDT; if (!E) return; const l = E.l;
+  if (typeof E.pid === 'number') { const p = S.r.find(x => x.id === E.pid); if (p) { l.pid = p.id; l.pname = p.name; l.pnum = p.num; } }
+  l.lbl = E.lbl; l.ev = (E.ev.from || E.ev.to) ? {from: E.ev.from, to: E.ev.to} : null;
+  if (E.owner === S.m) { if (S.m.arch) archiveCurrent(); } else saveH();
+  edClose(); upd(); say('✓ SAVED');
+}
+function edDelete() {
+  const id = EDT && EDT.l.id; if (!id) return; edClose();
+  askConfirm('Remove this play and every play after it?', () => undoTo(id));
+}
 function rotN(ca, k) { let c = [...ca]; for (let i = 0; i < k; i++) c = [c[1], c[2], c[3], c[4], c[5], c[0]]; return c; }
 function rot() {
   S.m.rn = ((S.m.rn || 0) + 1) % 6;
@@ -1054,9 +1136,10 @@ function openSub() {
   document.getElementById('subM').style.display = 'flex';
 }
 function doSub() { const idx = +document.getElementById('subOut').value, pid = +document.getElementById('subIn').value; if (!isNaN(pid)) S.m.court.splice(idx, 1, pid); document.getElementById('subM').style.display = 'none'; upd(); }
-function banned(lbl, pid) {
+function banned(lbl, pid, c) {
+  c = c || {srv:S.m.srv, court:S.m.court};
   const p = S.r.find(x => x.id === pid); if (!p) return '';
-  const boy = genderOf(p) === 'M', sv = S.m.srv === 'us' && S.m.court[0] === pid;
+  const boy = genderOf(p) === 'M', sv = c.srv === 'us' && c.court[0] === pid;
   if (['Attack Kill', 'Block Point', 'Attack Err'].includes(lbl) && boy) return 'SETTERS CAN\'T ATTACK OR BLOCK';
   if (['Service Ace', 'Serve Err'].includes(lbl) && !sv) return 'ONLY THE SERVER CAN DO THAT';
   return '';
@@ -1187,6 +1270,7 @@ function renSnap() {
   if (mode === 'plays') {
     const el = document.getElementById('rCourt'), cap = document.getElementById('snapCap');
     let l = S.snapLog; if (l && !rvLogs().includes(l)) l = S.snapLog = null;
+    const eb = document.getElementById('snapEdit'); if (eb) eb.style.display = l && l.lbl !== 'Point' && l.type !== 'call' ? '' : 'none';
     if (!l) { cap.textContent = 'Select a play on the left.'; el.innerHTML = ''; return; }
     cap.textContent = `#${IDX.get(l) || ''}   ${l.us}-${l.them}   ${l.pname}: ${l.lbl}`;
     el.innerHTML = fullCourtHTML(gridTokens(l.snap, l.svB, {}), l.ev, false, '', l.svB);
