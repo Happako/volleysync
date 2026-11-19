@@ -525,6 +525,43 @@ body::after{display:none}
 .hdot.hl{background:rgba(198,255,0,.55)}.hdot.hp{background:rgba(255,46,147,.55)}
 .hdot.ring{background:transparent!important;border:3px solid;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:900;line-height:1;text-shadow:0 0 4px #000}
 .hdot.hl.ring{border-color:#c6ff00;color:#c6ff00}.hdot.hp.ring{border-color:#ff2e93;color:#ff8ac4}
+
+/* ===== colour system: lime = our team, pink = opponent (who). Cyan = neutral UI. Purple = decoration. ===== */
+body{background-image:radial-gradient(circle at 8% 10%,rgba(110,12,255,.35) 0 90px,transparent 92px),radial-gradient(circle at 94% 16%,rgba(0,229,255,.14) 0 80px,transparent 82px),radial-gradient(circle,rgba(255,255,255,.06) 2px,transparent 2.5px)!important}
+header{border-bottom-color:#00e5ff!important;box-shadow:0 5px 0 #6e0cff!important}
+header h1{color:#00e5ff!important;text-shadow:3px 3px 0 #6e0cff!important}
+.tab.active{background:#00e5ff!important;color:#000!important;border-color:#00e5ff!important;box-shadow:3px 3px 0 #6e0cff!important}
+.card h2{background:#00e5ff!important;box-shadow:3px 3px 0 #6e0cff!important}
+.btn-p{background:#00e5ff!important;color:#000!important}
+.btn-o{background:#2a1f5c!important;color:#fff!important;border:2px solid #3b2d70!important}
+.btn-o:disabled{opacity:.35}
+input:focus,select:focus,textarea:focus{border-color:#00e5ff!important;box-shadow:0 0 0 3px rgba(0,229,255,.25)!important}
+.toast,th,#heatCap,#snapCap{color:#00e5ff!important}
+.net::after{background:#6e0cff!important}.net + .crow{border-bottom-color:#00e5ff!important}
+.sb,.sb2{box-shadow:5px 5px 0 #6e0cff!important}
+.chbtn:hover,.chbtn.on{border-color:#00e5ff!important}.chbtn.on{box-shadow:0 0 14px rgba(0,229,255,.5)!important}
+#subM .card,#pickM .card{border-color:#00e5ff!important}
+#rotToast{background:#00e5ff!important;box-shadow:5px 5px 0 #6e0cff!important}
+.res.win .restitle{text-shadow:6px 6px 0 #6e0cff,0 0 40px rgba(198,255,0,.7)!important}
+.chk input{accent-color:#00e5ff!important}.chk input:checked{background:#00e5ff!important;border-color:#00e5ff!important}
+.fline{border-top-color:rgba(255,255,255,.55)!important}.fc-l1,.fc-l2{border-top-color:rgba(255,255,255,.5)!important}
+.fc-opp,.fc-us{background:repeating-linear-gradient(0deg,#2a1f5c 0 8.33%,#251b55 8.33% 16.66%)!important}
+.live .cpos:hover,.cpos.sel{border-color:#00e5ff!important}
+.cpos.sel{background:rgba(0,40,50,.92)!important;box-shadow:0 0 0 4px rgba(0,229,255,.35),0 0 22px rgba(0,229,255,.6),4px 4px 0 rgba(0,0,0,.45)!important}
+.cpos.sel::before,.ltok.sel::before{color:#00e5ff!important}
+.ltok.sel .av{box-shadow:0 0 0 4px #00e5ff,0 0 20px #00e5ff!important}
+.pbtn{border-color:#3b2d70!important}.pbtn.sel{background:#0b2a35!important;border-color:#00e5ff!important;box-shadow:0 0 18px rgba(0,229,255,.5),4px 4px 0 rgba(0,0,0,.45)!important}
+.slotbtn.on,.bchip.on,.fthumb.on{border-color:#00e5ff!important;box-shadow:0 0 0 3px rgba(0,229,255,.35)!important}
+.qbtn{border-color:#00e5ff!important;color:#00e5ff!important}
+.fhelp.pop,.menu{border-color:#00e5ff!important}
+.seg button.on,.rb.all{background:#00e5ff!important;color:#000!important;border-color:#00e5ff!important}
+#recToast{border-color:#00e5ff!important}#recToast .btn{background:#00e5ff!important}
+.oppPill.on{background:#ff2e93!important;color:#fff!important;box-shadow:0 0 0 4px #fff,0 0 22px rgba(255,46,147,.9),3px 3px 0 #000!important}
+.av.g-F,.ftok.g-F .av{border-color:#ff9f1c!important}.gbtn.g-F{background:#ff9f1c!important;color:#000!important}.fd.g-F{background:#ff9f1c!important}
+#actPanel .glabel{color:#b9aee8!important}
+#actPanel[data-t=us] .ae{background:rgba(198,255,0,.14);color:#d8ff4d;border:3px solid #c6ff00;box-shadow:none}
+#actPanel[data-t=opp] .ag,#actPanel .abtn.oe{background:rgba(255,46,147,.2);color:#ff8ac4;border:3px solid #ff2e93;box-shadow:none}
+#actPanel .abtn.off{filter:grayscale(1)}
 </style>
 </head>
 <body>
@@ -1177,11 +1214,11 @@ function renAct() {
     const note = pl && (boy || !sv) ? `<div class="actnote">${boy ? 'Setter: no attack or block. ' : ''}${sv ? '' : 'Not serving: no Ace / Serve Err.'}</div>` : '';
     h = (pl ? `<div class="selchip"><div class="av">${avHTML(pl)}</div><b>${pl.name}</b><button onclick="clearSel()">✕</button></div>` : `<div class="selchip none">Tap a player on the court</div>`)
       + note
-      + `<div class="alist"><button class="abtn ag wide" onclick="rec('err','Opp Error')">🙌 Opponent Error (+1 US)</button></div>`
+      + `<div class="alist"><button class="abtn ag wide oe" onclick="rec('err','Opp Error')">🙌 Opponent Error (+1 US)</button></div>`
       + grp('GOOD PLAY (+1 US)', 'var(--g)', [B('ag','good','Attack Kill','⚡ Kill',d), B('ag','good','Service Ace','🎯 Ace'), B('ag','good','Block Point','🧱 Block',d + ' span2')])
       + grp('MISTAKE (+1 OPP)', 'var(--e)', [B('ae','err','Attack Err','❌ Attack Err',d), B('ae','err','Serve Err','❌ Serve Err'), B('ae','err','Receive Err','❌ Recv Err',d), B('ae','err','Set Err','❌ Set Err',d), B('ae','err','Net / Foul','⚠️ Net/Foul',d + ' span2')]);
   }
-  el.innerHTML = h;
+  el.dataset.t = o ? 'opp' : 'us'; el.innerHTML = h;
 }
 const SETOF = new Map(), IDX = new Map();
 function mkey(m) { return (m.date || '') + ' vs ' + (m.opp || ''); }
@@ -1304,7 +1341,7 @@ function renSnap() {
   shown.forEach(x => {
     const a = evXY(x.ev.from), b = evXY(x.ev.to), mis = h === 'def' ? x.type === 'good' : x.type === 'err', col = h === 'def' ? '#ff2e93' : '#c6ff00';
     const dx = b[0] - a[0], dy = (b[1] - a[1]) * HR, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
-    const bx = b[0] - ux * L, by = b[1] - uy * L, px = -uy * W, py = ux * W;
+    const bx = b[0] - ux * L, by = b[1] * HR - uy * L, px = -uy * W, py = ux * W;   // by is in real units (y% * HR)
     svg += `<line x1="${a[0]}" y1="${a[1]}" x2="${bx}" y2="${by / HR}" stroke="${col}"${mis ? ' stroke-dasharray="7 6"' : ''}/>`
         + `<polygon points="${b[0]},${b[1]} ${bx + px},${(by + py) / HR} ${bx - px},${(by - py) / HR}" fill="${col}" stroke="none"/>`;
     dots += `<i class="hdot ${h === 'def' ? 'hp' : 'hl'}${mis ? ' ring' : ''}" style="left:${b[0]}%;top:${b[1]}%">${mis ? '✕' : ''}</i>`;
