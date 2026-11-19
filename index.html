@@ -521,9 +521,9 @@ body::after{display:none}
       <div id="mainMenu" class="menu">
         <button onclick="openTeam()">👥 Team</button>
         <button onclick="backToStart()">🏁 Start screen</button>
-        <button onclick="saveFile()">💾 Save to file</button>
-        <label class="mitem">📂 Load from file<input type="file" accept=".json,application/json" style="display:none" onchange="loadFile(event)"></label>
-        <button onclick="csv()">📥 Export CSV</button>
+        <button onclick="saveFile()">💾 Backup: save all data</button>
+        <label class="mitem">📂 Restore: load backup<input type="file" accept=".json,application/json" style="display:none" onchange="loadFile(event)"></label>
+        <button onclick="csv()">📥 Export plays (CSV for Excel)</button>
       </div></div>
   </div>
 </header>
