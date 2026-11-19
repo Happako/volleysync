@@ -581,6 +581,19 @@ input:focus,select:focus,textarea:focus{border-color:#00e5ff!important;box-shado
 .srdet{margin-top:8px;font-size:.88rem}.srdet summary{cursor:pointer;color:#00e5ff;font-weight:700;padding:6px 0}
 .srhint2{color:#b9aee8;font-size:.8rem}
 @media(max-width:700px){.srcols{grid-template-columns:1fr}}
+
+.ballcard h2{background:none!important;box-shadow:none!important;transform:none!important;color:#fff!important;padding:0 0 6px!important;border-bottom:2px solid #3b2d70;font-style:normal!important;font-size:1.1rem!important;display:block!important;margin:0 0 10px!important;border-radius:0!important}
+.seg.heat{display:flex;width:100%}.seg.heat button{flex:1;min-height:48px;font-size:.92rem}
+.hplayers{min-height:52px;display:flex;align-items:center;gap:10px;margin:10px 0 4px}
+.hplab{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#b9aee8;flex-shrink:0}
+.hpchips{display:flex;gap:8px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0}
+.hpchips::-webkit-scrollbar{display:none}
+.hpchips button{flex:0 0 auto;min-height:44px;padding:0 16px;border-radius:999px;background:#120c2e;color:#fff;border:2px solid #3b2d70;font-weight:700;font-family:inherit;font-size:.9rem;cursor:pointer}
+.hpchips button.on{background:#00e5ff;color:#000;border-color:#00e5ff}
+#heatCap.hlegend{color:#b9aee8!important;font-weight:600;font-size:.85rem;margin:6px 0}
+.hleg{display:flex;gap:18px;flex-wrap:wrap;align-items:center;color:#fff;font-weight:700;margin-bottom:4px}
+.hleg span{display:inline-flex;align-items:center;gap:6px}
+.hcount{color:#fff;font-size:.9rem}.hhint{font-size:.8rem;margin-top:2px}
 </style>
 </head>
 <body>
@@ -686,9 +699,11 @@ input:focus,select:focus,textarea:focus{border-color:#00e5ff!important;box-shado
       </div>
     </div>
     <div id="rvAnal" class="g2" style="display:none">
-      <div class="card">
-        <div class="hrow2"><h2>Ball map</h2><div id="heatModes" class="modes"></div></div>
-        <p id="heatCap" style="font-size:.85rem;color:var(--p);font-weight:700;margin:0 0 6px"></p>
+      <div class="card ballcard">
+        <h2>Ball map</h2>
+        <div id="heatModes" class="seg heat"></div>
+        <div id="heatPlayers" class="hplayers"></div>
+        <div id="heatCap" class="hlegend"></div>
         <div id="aCourt"></div>
       </div>
       <div class="card"><h2>Player Summary</h2><table><thead><tr><th>Player</th><th>Pts(+)</th><th>Kill</th><th>Ace</th><th>Blk</th><th>Err(-)</th></tr></thead><tbody id="sBody"></tbody></table></div>
@@ -1325,10 +1340,11 @@ function renReport() {
   const names = Object.keys(o.servers).map(id => { const p = S.r.find(x => x.id === +id), e = o.servers[id]; return `${p ? p.name : id}: ${e.err} error${e.err === 1 ? '' : 's'}, ${e.ace} ace${e.ace === 1 ? '' : 's'} in ${e.n} serve${e.n === 1 ? '' : 's'}`; });
   const types = Object.entries(o.errTypes).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', ') || 'none';
   const fin = R.last && R.last === S.m && result();
+  const open = S.rpOpen !== false;
   el.innerHTML = `<div class="card srcard">
-    <div class="hrow2"><h2>Set Report</h2>${fin ? '<button class="btn btn-sm btn-p" onclick="nextSet()">Next Set ▶</button>' : ''}</div>
+    <div class="hrow2"><h2>Set Report</h2><span style="display:flex;gap:8px">${fin ? '<button class="btn btn-sm btn-p" onclick="nextSet()">Next Set ▶</button>' : ''}<button class="btn btn-sm btn-o" onclick="S.rpOpen = !(S.rpOpen !== false); renReport()">${open ? '▾ Hide' : '▸ Show'}</button></span></div>
     <div class="srhead">${head}</div>
-    <div class="srcols">
+    ${open ? `<div class="srcols">
       <div class="srcol good"><h3>Good</h3>${G.length ? '<ul>' + li(G) + '</ul>' : '<p class="srnone">Nothing stood out above the targets.</p>'}</div>
       <div class="srcol fix"><h3>Fix</h3>${F.length ? '<ul>' + li(F) + '</ul>' : '<p class="srnone">Nothing fell below the targets.</p>'}</div>
     </div>
@@ -1347,7 +1363,7 @@ function renReport() {
       <p><b>Serving by player</b> (counts only, too small to judge): ${names.length ? names.join(';  ') : 'none'}.</p>
       <p><b>Their longest run:</b> ${o.run} point${o.run === 1 ? '' : 's'}${o.run ? ` (to ${o.runEnd})` : ''}.</p>
       <p class="srhint2">Judgments need at least ${SR.MIN} chances. Targets are starting defaults. Opponent attack kills are never counted as our mistakes.</p>
-    </details>
+    </details>` : ''}
   </div>`;
 }
 function renRvBar() {
@@ -1467,11 +1483,18 @@ function renSnap() {
     dots += `<i class="hdot ${h === 'def' ? 'hp' : 'hl'}${mis ? ' ring' : ''}" style="left:${b[0]}%;top:${b[1]}%">${mis ? '✕' : ''}</i>`;
     n++; if (mis) nPt++;
   });
-  const chips = h === 'off' && pids.length ? [`<button class="btn btn-sm ${S.heatP == null ? 'btn-p' : 'btn-o'}" onclick="setHeatP(null)">All</button>`].concat(pids.map(id => { const p = S.r.find(q => q.id === id); return `<button class="btn btn-sm ${S.heatP === id ? 'btn-p' : 'btn-o'}" onclick="setHeatP(${id})">${p ? p.name : id}</button>`; })).join('') : '';
-  document.getElementById('heatModes').innerHTML = [['def', 'Defense'], ['off', 'Offense']].map(([k, t]) => `<button class="btn btn-sm ${h===k?'btn-p':'btn-o'}" onclick="setHeat('${k}')">${t}</button>`).join('') + (chips ? `<span style="width:12px"></span>${chips}` : '');
-  document.getElementById('heatCap').textContent = n
-    ? (h === 'def' ? `Defense: ${n} opponent attacks (pink), from where they hit to where the ball landed. Solid = their point, dashed with ✕ = their error (${nPt})` : `Offense: ${n} of our attacks (lime), from the player's position to where the ball landed. Solid = our point, dashed with ✕ = our error (${nPt})`)
-    : (h === 'def' ? 'Defense: no opponent attacks with both a hit-from point and a landing point yet.' : 'Offense: no attacks with a landing point yet.');
+  const col = h === 'def' ? '#ff2e93' : '#c6ff00', who = h === 'off' && S.heatP != null ? ((S.r.find(q => q.id === S.heatP) || {}).name || '') : '', okN = n - nPt;
+  document.getElementById('heatModes').innerHTML = [['def', 'Defense: their attacks', '#ff2e93'], ['off', 'Offense: our attacks', '#c6ff00']].map(([k, t, c]) => `<button class="${h === k ? 'on' : ''}" style="box-shadow:inset 0 -4px 0 ${c}" onclick="setHeat('${k}')">${t}</button>`).join('');
+  document.getElementById('heatPlayers').innerHTML = h === 'off' && pids.length
+    ? `<span class="hplab">Player</span><div class="hpchips"><button class="${S.heatP == null ? 'on' : ''}" onclick="setHeatP(null)">All players</button>${pids.map(id => { const p = S.r.find(q => q.id === id); return `<button class="${S.heatP === id ? 'on' : ''}" onclick="setHeatP(${id})">${p ? p.name : id}</button>`; }).join('')}</div>` : '';
+  const sw = dash => `<svg width="44" height="14" viewBox="0 0 44 14"><line x1="2" y1="7" x2="31" y2="7" stroke="${col}" stroke-width="3"${dash ? ' stroke-dasharray="7 5"' : ''}/><polygon points="42,7 31,2 31,12" fill="${col}"/></svg>`;
+  const cap = document.getElementById('heatCap');
+  cap.innerHTML = n
+    ? `<div class="hleg"><span>${sw(false)} ${h === 'def' ? 'Their point' : 'Scored'}</span><span>${sw(true)} ✕ ${h === 'def' ? 'Their error' : 'Error'}</span></div>
+       <div class="hcount"><b>${who ? who + ' · ' : ''}${n} attack${n === 1 ? '' : 's'}</b> · ${okN} ${h === 'def' ? 'their point' + (okN === 1 ? '' : 's') : 'scored'} · ${nPt} ${h === 'def' ? 'their error' : 'error'}${nPt === 1 ? '' : 's'}</div>
+       <div class="hhint">${h === 'def' ? 'From where they hit to where the ball landed on our side.' : "From the hitter's spot to where the ball landed."}</div>`
+    : `<div class="hcount">${h === 'def' ? 'No opponent attacks with both a hit point and a landing point yet.' : (who ? `No landed attacks for ${who} yet. Try All players.` : 'No attacks with a landing point yet. Tap where the ball landed when you log an attack.')}</div>`;
+  document.getElementById('aCourt').style.opacity = n ? '' : '.45';
   document.getElementById('aCourt').innerHTML = fullCourtHTML('', null, false, `<svg class="arsvg" viewBox="0 0 100 100" preserveAspectRatio="none">${svg}</svg>` + dots);
 }
 function csv() {
